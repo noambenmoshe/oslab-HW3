@@ -625,13 +625,13 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 
     if(!list_empty(&current->policy_stack_head)){
         printk("\tparent has a policy\n"); //DEBUG
-        p_policy_inst oldest_policy_inst = list_entry(current->policy_stack_head.prev, policy_inst, list_pointers);
+        struct policy_inst* oldest_policy_inst = list_entry(current->policy_stack_head.prev,policy_inst, list_pointers);
         if(oldest_policy_inst == NULL){
             printk("\toldest_policy_inst is NULL\n"); //DEBUG
         }
         printk("\toldest_policy_inst is ok\n"); //DEBUG
 
-        p_policy_inst new_policy_inst = kmalloc(sizeof(policy_inst),GFP_KERNEL);
+        struct policy_inst* new_policy_inst = kmalloc(sizeof(policy_inst),GFP_KERNEL);
         printk("\tafter malloc\n"); //DEBUG
         if(new_policy_inst == NULL){
             printk("\tmalloc error\n"); //DEBUG

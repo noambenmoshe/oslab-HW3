@@ -34,35 +34,34 @@ void remove(p_policy_inst curr ){
 
 ///***************************policy_sleep*****************************************//
 void run_policies(struct task_struct * pTask){
-
-    struct  list_head* curr;
+    long code;
     p_policy_inst curr_policy_inst;
     p_policy_inst next_policy_inst;
-    while(!list_empty(pTask->policy_stack_head)){
+    while(!list_empty(&pTask->policy_stack_head)){
         //oldest policy
-        curr_policy_inst = list_entry(pTast->policy_stack_head.prev,policy_inst,list_pointers);
+        curr_policy_inst = list_entry(pTask->policy_stack_head.prev,policy_inst,list_pointers);
         if(curr_policy_inst->policy_id == 1){ //sleep
             pTask->state = TASK_UNINTERRUPTIBLE;
-            schedule_timeout((signed long)policy_value);
-            if(curr_policy_inst->list_pointers.next == pTask->policy_stack_head){ //no more polices
-                wake_up_process(pTask->pid);
+            schedule_timeout((signed long)curr_policy_inst->policy_value);
+            if(curr_policy_inst->list_pointers.next == &pTask->policy_stack_head){ //no more polices
+                wake_up_process(pTask);
             }
             else{
                 next_policy_inst = list_entry(curr_policy_inst->list_pointers.next,policy_inst,list_pointers);
                 if(next_policy_inst->policy_id == 0){
-                    wake_up_process(pTask->pid);
+                    wake_up_process(pTask);
                 }
             }
         }else if(curr_policy_inst->policy_id == 2){//terminate
             pTask->state = TASK_UNINTERRUPTIBLE;
-            schedule_timeout((signed long)policy_value);
-            if(curr_policy_inst->list_pointers.next == pTask->policy_stack_head) { //no more policies
-                do_exit();
+            schedule_timeout((signed long)curr_policy_inst->policy_value);
+            if(curr_policy_inst->list_pointers.next == &pTask->policy_stack_head) { //no more policies
+                do_exit(code);
             }
-            else if {
+            else{
                 next_policy_inst = list_entry(curr_policy_inst->list_pointers.next, policy_inst, list_pointers);
-                if (next_policy_inst->policy_id == 2) { //also terminate
-                    do_exit();
+                if (next_policy_inst->policy_id == 2) { //next inst is also terminate
+                    do_exit(code);
                 }
             }
         }
@@ -87,12 +86,12 @@ int sys_set_policy(pid_t pid, int policy_id, int policy_value){
 	if(check_if_allowed(current->pid,pid) == -1)
 		return -ESRCH;
 	printk("\tallowed to change policy\n"); //DEBUG
-	p_policy_inst  new_policy_inst = kmalloc(sizeof(TODO_inst),GFP_KERNEL);
+	p_policy_inst  new_policy_inst = kmalloc(sizeof(policy_inst),GFP_KERNEL);
 	if(new_policy_inst == NULL){
         printk("\tallocation of new_policy_inst failed\n"); //DEBUG
         return -ENOMEM;
 	}
-	was_list_empty = list_empty(pTask->policy_stack_head);
+	was_list_empty = list_empty(&pTask->policy_stack_head);
 	new_policy_inst->policy_id = policy_id;
     new_policy_inst->policy_value = policy_value;
     list_add(&new_policy_inst->list_pointers,&pTask->policy_stack_head);
@@ -125,14 +124,14 @@ int sys_get_policy(pid_t pid, int* policy_id, int* policy_value){
 		return -ESRCH;
 	printk("\tallowed to get policy\n"); //DEBUG
 
-    p_policy_inst oldest_policy_inst = list_entry(pTast->policy_stack_head.prev,policy_inst,list_pointers);
-    result = copy_to_user(policy_id,&oldest_policy_inst->policy_id, sizeof(int));
-    if(result != 0){
+    p_policy_inst oldest_policy_inst = list_entry(pTask->policy_stack_head.prev,policy_inst,list_pointers);
+    int result1 = copy_to_user(policy_id,&oldest_policy_inst->policy_id, sizeof(int));
+    if(result1 != 0){
         printk("\tcopy_to_user of policy_id did not fully succeed\n"); //DEBUG
         // error copying to user space
         return -EFAULT;
     }
-    result2 = copy_to_user(policy_value,&oldest_policy_inst->policy_value, sizeof(int));
+    int result2 = copy_to_user(policy_value,&oldest_policy_inst->policy_value, sizeof(int));
     if(result2 != 0){
         printk("\tcopy_to_user of policy_value did not fully succeed\n"); //DEBUG
         // error copying to user space
