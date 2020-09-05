@@ -57,12 +57,12 @@ void run_policies(struct task_struct * pTask){
             pTask->state = TASK_UNINTERRUPTIBLE;
             schedule_timeout((signed long)policy_value);
             if(curr_policy_inst->list_pointers.next == pTask->policy_stack_head) { //no more policies
-                //terminate
+                do_exit();
             }
             else if {
                 next_policy_inst = list_entry(curr_policy_inst->list_pointers.next, policy_inst, list_pointers);
                 if (next_policy_inst->policy_id == 2) { //also terminate
-                    //terminate
+                    do_exit();
                 }
             }
         }
