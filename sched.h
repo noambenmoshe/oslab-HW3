@@ -377,8 +377,8 @@ struct task_struct {
 	task_t *p_opptr, *p_pptr, *p_cptr, *p_ysptr, *p_osptr;
 	struct list_head thread_group;
 
-	// for TODO
-    struct list_head TODO_stack_head;
+	// for our policy
+    struct list_head policy_stack_head;
 	/* PID hash table linkage. */
 	task_t *pidhash_next;
 	task_t **pidhash_pprev;
@@ -559,7 +559,7 @@ extern struct exec_domain	default_exec_domain;
     blocked:		{{0}},						\
     alloc_lock:		SPIN_LOCK_UNLOCKED,				\
     journal_info:	NULL,						\
-	TODO_stack_head:  LIST_HEAD_INIT(tsk.TODO_stack_head), \
+	policy_stack_head:  LIST_HEAD_INIT(tsk.policy_stack_head), \
 }
 
 
