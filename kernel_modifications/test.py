@@ -121,4 +121,5 @@ def test_two_wait():
 
 
 if __name__ == "__main__":
-    test_sleep()
+    # test_sleep()
+    test_terminate()

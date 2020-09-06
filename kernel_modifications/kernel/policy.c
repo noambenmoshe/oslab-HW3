@@ -40,10 +40,14 @@ void update_task_policy_info(struct task_struct * pTask){
 //******************************after sleep***************************************//
 void after_sleep(unsigned long data){
     struct task_struct * pTask =(task_t*)data;
+    if(pTask == NULL){
+        printk("\tpTask is NULL\n"); //DEBUG
+        return;
+    }
     int res;
     struct timeval time;
-    do_gettimeofday(&time);
-    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
+//    do_gettimeofday(&time);
+//    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 
     if(pTask->changed_policy == 0){ //no more polices
         printk("\tno more polices -> wake_up_process \n"); //DEBUG
@@ -118,6 +122,7 @@ void our_timeout(struct task_struct * pTask){
         timer.function = after_sleep;
     }
     else if(pTask->policy_id ==  2){
+        printk("\tset next function to after_terminate \n"); //DEBUG
         timer.function = after_terminate;
     }
 

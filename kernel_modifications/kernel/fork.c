@@ -618,7 +618,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 
     //our policy
     // initialize the child's policy stack according to the parents policy if exists
-    printk("In do_fork\n"); //DEBUG
+    //printk("In do_fork\n"); //DEBUG
     p->policy_id = current->policy_id;
     p->policy_value = current->policy_value;
 
