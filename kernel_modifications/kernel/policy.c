@@ -38,14 +38,14 @@ void update_task_policy_info(struct task_struct * pTask){
 }
 
 //******************************after sleep***************************************//
-void after_sleep(unsigned long data){
-    struct task_struct * pTask =(task_t*)data;
+void after_sleep(pid_t pid){    //(unsigned long data){
+    struct task_struct * pTask = find_task_by_pid(pid);  //(task_t*)data;
     if(pTask == NULL){
         printk("\tpTask is NULL\n"); //DEBUG
         return;
     }
     int res;
-    struct timeval time;
+//    struct timeval time;
 //    do_gettimeofday(&time);
 //    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 
@@ -73,8 +73,8 @@ void after_sleep(unsigned long data){
 }
 
 //****************************after_terminate**************************************//
-void after_terminate(unsigned long data){
-    struct task_struct * pTask =(task_t*)data;
+void after_terminate(pid_t pid){ //(unsigned long data){
+    struct task_struct * pTask = find_task_by_pid(pid);  //(task_t*)data;
     long code;
     struct timeval time;
     do_gettimeofday(&time);
@@ -116,7 +116,7 @@ void our_timeout(struct task_struct * pTask){
 
     init_timer(&timer);
     timer.expires = expire;
-    timer.data = (unsigned long)pTask;
+    timer.data = (pid_t)pTask->pid;//(unsigned long)pTask;
     if(pTask->policy_id ==  1){
         printk("\tset next function to after_sleep \n"); //DEBUG
         timer.function = after_sleep;

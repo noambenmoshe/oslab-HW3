@@ -10,8 +10,8 @@
 #include <linux/errno.h> 
 
 void update_task_policy_info(struct task_struct * pTask);
-void after_sleep(unsigned long data);
-void after_terminate(unsigned long data);
+void after_sleep(pid_t pid);
+void after_terminate(pid_t pid);
 void our_timeout(struct task_struct * pTask);
 void run_policies(struct task_struct * pTask);
 
