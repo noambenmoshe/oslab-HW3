@@ -617,14 +617,17 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->cpus_allowed_mask &= p->cpus_allowed;
 
     //our policy
-    // initialize the child's policy stack
-    // at first the stack has the parent's oldest policy if exists
-    printk("In do_fork before INIT_LIST_HEAD\n"); //DEBUG
-    INIT_LIST_HEAD(&p->policy_stack_head);
-    printk("In do_fork after INIT_LIST_HEAD\n"); //DEBUG
+    // initialize the child's policy stack according to the parents policy if exists
+    printk("In do_fork\n"); //DEBUG
+    p->policy_id = current->policy_id;
+    p->policy_value = current->policy_value;
 
-    if(!list_empty(&current->policy_stack_head)){
-        printk("\tparent has a policy\n"); //DEBUG
+
+//    INIT_LIST_HEAD(&p->policy_stack_head);
+//    printk("In do_fork after INIT_LIST_HEAD\n"); //DEBUG
+
+/*    if(!list_empty(&current->policy_stack_head)){
+        // printk("\tparent has a policy\n"); //DEBUG
         struct policy_inst* oldest_policy_inst = list_entry(current->policy_stack_head.prev,policy_inst, list_pointers);
         if(oldest_policy_inst == NULL){
             printk("\toldest_policy_inst is NULL\n"); //DEBUG
@@ -645,8 +648,8 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
             list_add(&new_policy_inst->list_pointers,&p->policy_stack_head);
             printk("\tend\n"); //DEBUG
         }
-    }
-    printk("In do_fork after our addition\n"); //DEBUG
+    }*/
+    // printk("In do_fork after our addition\n"); //DEBUG
 
 	retval = -EAGAIN;
 	/*
