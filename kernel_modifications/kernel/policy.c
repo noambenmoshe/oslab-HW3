@@ -38,7 +38,8 @@ void update_task_policy_info(struct task_struct * pTask){
 }
 
 //******************************after sleep***************************************//
-void after_sleep(struct task_struct * pTask){
+void after_sleep(unsigned long data){
+    struct task_struct * pTask =(task_t*)data;
     int res;
     struct timeval time;
     do_gettimeofday(&time);
@@ -64,10 +65,12 @@ void after_sleep(struct task_struct * pTask){
             run_policies(pTask);
         }
     }
+    printk("\tend after_sleep \n"); //DEBUG
 }
 
 //****************************after_terminate**************************************//
-void after_terminate(struct task_struct * pTask){
+void after_terminate(unsigned long data){
+    struct task_struct * pTask =(task_t*)data;
     long code;
     struct timeval time;
     do_gettimeofday(&time);
@@ -111,6 +114,7 @@ void our_timeout(struct task_struct * pTask){
     timer.expires = expire;
     timer.data = (unsigned long)pTask;
     if(pTask->policy_id ==  1){
+        printk("\tset next function to after_sleep \n"); //DEBUG
         timer.function = after_sleep;
     }
     else if(pTask->policy_id ==  2){
@@ -121,7 +125,9 @@ void our_timeout(struct task_struct * pTask){
     printk("\tbefore time_out time =%d\n",time.tv_sec); //DEBUG
 
     add_timer(&timer);
+    printk("\tafter add_timer \n"); //DEBUG
     schedule();
+    printk("\tafter_schedule \n"); //DEBUG
     del_timer_sync(&timer);
     printk("\tend our_timeout \n"); //DEBUG
 }
@@ -178,8 +184,8 @@ int sys_set_policy(pid_t pid, int policy_id, int policy_value){
         pTask->next_policy_value = policy_value;
         pTask->changed_policy = 1;
     }
-
-	// on success
+    printk("\tend sys_set\n"); //DEBUG
+    // on success
 	return 0;
 }
 
