@@ -175,3 +175,18 @@ int sys_get_policy(pid_t pid, int* policy_id, int* policy_value){
 	// on success
 	return 0;
 }
+
+/**TIMER**/
+void change(int sec){
+    struct timer_list timer;
+    unsigned long expire = sec + jiffies; //TODO: sec to jiffs
+
+    init_timer(&timer);
+    timer.expires = expire;
+    timer.data = (unsigned long) current; //TODO: what our func needs
+    timer.function = process_timeout; //TODO: our func
+
+    add_timer(&timer);
+    schedule();
+    del_timer_sync(&timer);
+}
