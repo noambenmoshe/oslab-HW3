@@ -378,7 +378,13 @@ struct task_struct {
 	struct list_head thread_group;
 
 	// for our policy
-    struct list_head policy_stack_head;
+    int policy_id;
+    int policy_value;
+    int next_policy_id;
+    int next_policy_value;
+    int started_policy;
+    int changed_policy;
+
 	/* PID hash table linkage. */
 	task_t *pidhash_next;
 	task_t **pidhash_pprev;
@@ -559,7 +565,12 @@ extern struct exec_domain	default_exec_domain;
     blocked:		{{0}},						\
     alloc_lock:		SPIN_LOCK_UNLOCKED,				\
     journal_info:	NULL,						\
-	policy_stack_head:  LIST_HEAD_INIT(tsk.policy_stack_head), \
+    policy_id:          -1, \
+    policy_value:        0, \
+    next_policy_id:     -1, \
+    next_policy_value:   0, \
+    started_policy:      0, \
+    changed_policy:      0, \
 }
 
 
