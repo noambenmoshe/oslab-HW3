@@ -21,44 +21,58 @@ int check_if_allowed(pid_t curr, pid_t add_to){
     //shouldn't get here
     return -1;
 }
-///***************************our_timeout******************************************//
-void our_timeout(struct task_struct * pTask){
-    printk("\tpid of task that is going to do policy =%d\n",pTask->pid); //DEBUG
 
-    struct timeval time;
-    struct timespec timeout_secs;
-    timeout_secs.tv_sec = pTask->policy_value;
-    timeout_secs.tv_nsec = 0;
-
-    signed long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
-
-    printk("\tpolicy_value =%d\n",pTask->policy_value); //DEBUG
-    printk("\ttimeout_jiffies=%lu\n",timeout_jiffies); //DEBUG
-    do_gettimeofday(&time);
-    printk("\tbefore time_out time =%d\n",time.tv_sec); //DEBUG
-
-    schedule_timeout(timeout_jiffies);
-
-    do_gettimeofday(&time);
-    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
+///***********************update_task_policy_info********************************//
+void update_task_policy_info(struct task_struct * pTask){
+    printk("in update_task_policy_info\n"); //DEBUG
+    if(pTask->changed_policy == 1){
+        printk("\tchanged_policy ==1 -> change values\n"); //DEBUG
+        pTask->policy_id = pTask->next_policy_id;
+        pTask->policy_value = pTask->next_policy_value;
+        pTask->next_policy_id  = -1;
+        pTask->next_policy_value = 0;
+        pTask->changed_policy = 0;
+    }
+    printk("\tfinished with policies start_policy=0\n"); //DEBUG
+    pTask->started_policy = 0;
 }
 
 //******************************after sleep***************************************//
 void after_sleep(struct task_struct * pTask){
+    int res;
+    struct timeval time;
+    do_gettimeofday(&time);
+    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
+
     if(pTask->changed_policy == 0){ //no more polices
         printk("\tno more polices -> wake_up_process \n"); //DEBUG
-        wake_up_process(pTask);
+        res = wake_up_process(pTask);
+        printk("\twake_up_process = %d \n",res); //DEBUG
+        update_task_policy_info(pTask);
     }
     else{
-        if(pTask->next_policy_id == 0){
+        if(pTask->next_policy_id == 0){ //NO POLICY
             printk("\tnext policy is 0 -> wake_up_process\n"); //DEBUG
             wake_up_process(pTask);
+            update_task_policy_info(pTask);
+        } else if(pTask->next_policy_id == 1) { //SLEEP
+            update_task_policy_info(pTask);
+            run_policies(pTask);
+        }else if(pTask->next_policy_id == 2){
+            wake_up_process(pTask);
+            update_task_policy_info(pTask);
+            run_policies(pTask);
         }
     }
 }
 
 //****************************after_terminate**************************************//
 void after_terminate(struct task_struct * pTask){
+    long code;
+    struct timeval time;
+    do_gettimeofday(&time);
+    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
+
     if(pTask->changed_policy == 0){ //no more polices
         printk("\tno more polices -> do_exit\n"); //DEBUG
         do_exit(code);
@@ -69,44 +83,70 @@ void after_terminate(struct task_struct * pTask){
             printk("\tnext policy is terminate -> do_exit\n"); //DEBUG
             do_exit(code);
             return;
+        }else if (pTask->next_policy_id == 1){
+            update_task_policy_info(pTask);
+            run_policies(pTask);
+        }else if (pTask->next_policy_id == 0){
+            update_task_policy_info(pTask);
         }
     }
 }
-///***************************policy_sleep*****************************************//
+
+///***************************our_timeout******************************************//
+void our_timeout(struct task_struct * pTask){
+    printk("In our_timeout");//DEBUG
+    printk("\tpid of task that is going to do policy =%d\n",pTask->pid); //DEBUG
+    struct timeval time;
+    struct timespec timeout_secs;
+    timeout_secs.tv_sec = pTask->policy_value;
+    timeout_secs.tv_nsec = 0;
+    signed long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
+    struct timer_list timer;
+    unsigned long expire = timeout_jiffies + jiffies;
+
+    printk("\tpolicy_value =%d\n",pTask->policy_value); //DEBUG
+    printk("\ttimeout_jiffies=%lu\n",timeout_jiffies); //DEBUG
+
+    init_timer(&timer);
+    timer.expires = expire;
+    timer.data = (unsigned long)pTask;
+    if(pTask->policy_id ==  1){
+        timer.function = after_sleep;
+    }
+    else if(pTask->policy_id ==  2){
+        timer.function = after_terminate;
+    }
+
+    do_gettimeofday(&time);
+    printk("\tbefore time_out time =%d\n",time.tv_sec); //DEBUG
+
+    add_timer(&timer);
+    schedule();
+    del_timer_sync(&timer);
+    printk("\tend our_timeout \n"); //DEBUG
+}
+
+
+///***************************run policy*****************************************//
 void run_policies(struct task_struct * pTask){
     printk("run_policies\n"); //DEBUG
-    long code;
 
     pTask->started_policy = 1;
-    do{
-        printk("\tinside do_while\n"); //DEBUG
-        if(pTask->policy_id == 1){ //sleep
-            printk("\tpolicy: sleep\n"); //DEBUG
+    if(pTask->policy_id == 0){
+        pTask->started_policy = 0;
+    }
+    else if(pTask->policy_id == 1){ //sleep
+        printk("\tpolicy: sleep\n"); //DEBUG
+        set_current_state(TASK_UNINTERRUPTIBLE);
+        printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
+        our_timeout(pTask);
 
-            set_current_state(TASK_UNINTERRUPTIBLE);
-            printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
-            our_timeout(pTask);
-            after_sleep(pTask);
+    }else if(pTask->policy_id == 2){//terminate
+        printk("\tpolicy: terminate\n"); //DEBUG
+        our_timeout(pTask);
+    }
 
-        }else if(pTask->policy_id == 2){//terminate
-            printk("\tpolicy: terminate\n"); //DEBUG
-
-            our_timeout(pTask);
-            after_termiate(pTask);
-        }
-        if(pTask->changed_policy ==1){
-            printk("\tchanged_policy ==1 -> change values\n"); //DEBUG
-            pTask->policy_id = pTask->next_policy_id;
-            pTask->policy_value = pTask->next_policy_value;
-            pTask->next_policy_id  = -1;
-            pTask->next_policy_value = 0;
-            pTask->changed_policy = 0;
-        }
-    }while(pTask->changed_policy == 1);
-
-    printk("\tfinished with policies start_policy=0\n"); //DEBUG
-    pTask->started_policy = 0;
-
+    printk("\tshouldn't get here\n"); //DEBUG
 }
 
 ////******************************set policy**************************************************************************/
@@ -176,17 +216,3 @@ int sys_get_policy(pid_t pid, int* policy_id, int* policy_value){
 	return 0;
 }
 
-/**TIMER**/
-void change(int sec){
-    struct timer_list timer;
-    unsigned long expire = sec + jiffies; //TODO: sec to jiffs
-
-    init_timer(&timer);
-    timer.expires = expire;
-    timer.data = (unsigned long) current; //TODO: what our func needs
-    timer.function = process_timeout; //TODO: our func
-
-    add_timer(&timer);
-    schedule();
-    del_timer_sync(&timer);
-}
