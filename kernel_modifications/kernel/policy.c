@@ -1,4 +1,5 @@
 #include <linux/policy.h>
+#include <linux/delay.h>
 #include <linux/time.h> //DEBUG
 // *******************return value: 0 if allowed, -1 if not allowed**************************************************/
 int check_if_allowed(pid_t curr, pid_t add_to){
@@ -20,75 +21,78 @@ int check_if_allowed(pid_t curr, pid_t add_to){
     //shouldn't get here
     return -1;
 }
-///*************************remove policy_inst*************************************//
-void remove(p_policy_inst curr ){
-    printk("In remove\n"); //DEBUG
-    if (curr == NULL)
-        return;
+///***************************our_timeout******************************************//
+void our_timeout(struct task_struct * pTask){
+    printk("\tpid of task that is going to do policy =%d\n",pTask->pid); //DEBUG
 
-    //delete list_head struct
-    list_del(&curr->list_pointers); //?maybe I need to delete curr instead//
-    kfree(curr);
-    printk("\tpassed  kfree\n"); //DEBUG
+    struct timeval time;
+    struct timespec timeout_secs;
+    timeout_secs.tv_sec = pTask->policy_value;
+    timeout_secs.tv_nsec = 0;
+
+    signed long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
+
+    printk("\tpolicy_value =%d\n",pTask->policy_value); //DEBUG
+    printk("\ttimeout_jiffies=%lu\n",timeout_jiffies); //DEBUG
+    do_gettimeofday(&time);
+    printk("\tbefore time_out time =%d\n",time.tv_sec); //DEBUG
+
+    schedule_timeout(timeout_jiffies);
+
+    do_gettimeofday(&time);
+    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 }
 
+//******************************after sleep***************************************//
+void after_sleep(struct task_struct * pTask){
+    if(pTask->changed_policy == 0){ //no more polices
+        printk("\tno more polices -> wake_up_process \n"); //DEBUG
+        wake_up_process(pTask);
+    }
+    else{
+        if(pTask->next_policy_id == 0){
+            printk("\tnext policy is 0 -> wake_up_process\n"); //DEBUG
+            wake_up_process(pTask);
+        }
+    }
+}
+
+//****************************after_terminate**************************************//
+void after_terminate(struct task_struct * pTask){
+    if(pTask->changed_policy == 0){ //no more polices
+        printk("\tno more polices -> do_exit\n"); //DEBUG
+        do_exit(code);
+        return;
+    }
+    else{
+        if (pTask->next_policy_id == 2) { //next inst is also terminate
+            printk("\tnext policy is terminate -> do_exit\n"); //DEBUG
+            do_exit(code);
+            return;
+        }
+    }
+}
 ///***************************policy_sleep*****************************************//
 void run_policies(struct task_struct * pTask){
     printk("run_policies\n"); //DEBUG
     long code;
-
-    //DEBUG
-    struct timespec ts;
-    getnstimeofday(&ts);
-    //DEBUG
 
     pTask->started_policy = 1;
     do{
         printk("\tinside do_while\n"); //DEBUG
         if(pTask->policy_id == 1){ //sleep
             printk("\tpolicy: sleep\n"); //DEBUG
-            pTask->state = TASK_UNINTERRUPTIBLE;
+
+            set_current_state(TASK_UNINTERRUPTIBLE);
             printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
-            printk("\tbefore time_out time =\n"); //DEBUG
-            printk("TIME: %.2lu:%.2lu:%.2lu:%.6lu \r\n",
-                   (curr_tm.tv_sec / 3600) % (24),
-                   (curr_tm.tv_sec / 60) % (60),
-                   curr_tm.tv_sec % 60,
-                   curr_tm.tv_nsec / 1000);//DEBUG
-            schedule_timeout((signed long)pTask->policy_value);
-            printk("\tafter time_out time =\n"); //DEBUG
-            printk("TIME: %.2lu:%.2lu:%.2lu:%.6lu \r\n",
-                   (curr_tm.tv_sec / 3600) % (24),
-                   (curr_tm.tv_sec / 60) % (60),
-                   curr_tm.tv_sec % 60,
-                   curr_tm.tv_nsec / 1000);//DEBUG
-            if(pTask->changed_policy == 0){ //no more polices
-                printk("\tno more polices -> wake_up_process =\n"); //DEBUG
-                wake_up_process(pTask);
-            }
-            else{
-                if(pTask->next_policy_id == 0){
-                    printk("\tnext policy is 0 -> wake_up_process =\n"); //DEBUG
-                    wake_up_process(pTask);
-                }
-            }
+            our_timeout(pTask);
+            after_sleep(pTask);
+
         }else if(pTask->policy_id == 2){//terminate
             printk("\tpolicy: terminate\n"); //DEBUG
-            pTask->state = TASK_UNINTERRUPTIBLE;
-            printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
-            schedule_timeout((signed long)pTask->policy_value);
-            if(pTask->changed_policy == 0){ //no more polices
-                printk("\tno more polices -> do_exit\n"); //DEBUG
-                do_exit(code);
-                return;
-            }
-            else{
-                if (pTask->next_policy_id == 2) { //next inst is also terminate
-                    printk("\tnext policy is terminate -> do_exit\n"); //DEBUG
-                    do_exit(code);
-                    return;
-                }
-            }
+
+            our_timeout(pTask);
+            after_termiate(pTask);
         }
         if(pTask->changed_policy ==1){
             printk("\tchanged_policy ==1 -> change values\n"); //DEBUG
@@ -98,7 +102,7 @@ void run_policies(struct task_struct * pTask){
             pTask->next_policy_value = 0;
             pTask->changed_policy = 0;
         }
-    }while(pTask->changed_policy == 1)
+    }while(pTask->changed_policy == 1);
 
     printk("\tfinished with policies start_policy=0\n"); //DEBUG
     pTask->started_policy = 0;
@@ -126,9 +130,13 @@ int sys_set_policy(pid_t pid, int policy_id, int policy_value){
     // if pTask->started_policy==1 we don't need to start the policy
     // policy will start after previous policies happened
     if(!pTask->started_policy){
+        pTask->policy_id = policy_id;
+        pTask->policy_value = policy_value;
         run_policies(pTask);
     }else{
-        pTask->change_policy = 1;
+        pTask->next_policy_id  = policy_id;
+        pTask->next_policy_value = policy_value;
+        pTask->changed_policy = 1;
     }
 
 	// on success
@@ -152,14 +160,13 @@ int sys_get_policy(pid_t pid, int* policy_id, int* policy_value){
 		return -ESRCH;
 	printk("\tallowed to get policy\n"); //DEBUG
 
-    p_policy_inst oldest_policy_inst = list_entry(pTask->policy_stack_head.prev,policy_inst,list_pointers);
-    int result1 = copy_to_user(policy_id,&oldest_policy_inst->policy_id, sizeof(int));
+    int result1 = copy_to_user(policy_id,&pTask->policy_id, sizeof(int));
     if(result1 != 0){
         printk("\tcopy_to_user of policy_id did not fully succeed\n"); //DEBUG
         // error copying to user space
         return -EFAULT;
     }
-    int result2 = copy_to_user(policy_value,&oldest_policy_inst->policy_value, sizeof(int));
+    int result2 = copy_to_user(policy_value,&pTask->policy_value, sizeof(int));
     if(result2 != 0){
         printk("\tcopy_to_user of policy_value did not fully succeed\n"); //DEBUG
         // error copying to user space
