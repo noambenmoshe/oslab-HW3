@@ -7,7 +7,10 @@
 #include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <linux/list.h>
-#include <linux/errno.h> 
+#include <linux/errno.h>
+#include <linux/param.h>
+#include <linux/signal.h>
+
 
 void update_task_policy_info(struct task_struct * pTask);
 void after_sleep(unsigned long data);

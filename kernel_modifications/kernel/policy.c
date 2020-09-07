@@ -1,6 +1,8 @@
 #include <linux/policy.h>
 #include <linux/delay.h>
 #include <linux/time.h> //DEBUG
+
+
 // *******************return value: 0 if allowed, -1 if not allowed**************************************************/
 int check_if_allowed(pid_t curr, pid_t add_to){
     printk("In check_if_allowed\n"); //DEBUG
@@ -74,16 +76,19 @@ void after_sleep(unsigned long data){
 
 //****************************after_terminate**************************************//
 void after_terminate(unsigned long data){
+    printk("Inside terminate\n"); //DEBUG
     struct task_struct * pTask = (task_t*)data;
+    siginfo_t info;
     long code;
     struct timeval time;
-    do_gettimeofday(&time);
-    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
+//    do_gettimeofday(&time);
+//    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 
     if(pTask->changed_policy == 0){ //no more polices
         printk("\tno more polices -> do_exit\n"); //DEBUG
 //        do_exit(code);
 //        kill(pTask->pid, 15);
+          kill_proc_info(15,&info,pTask->pid);
         return;
     }
     else{
@@ -91,6 +96,8 @@ void after_terminate(unsigned long data){
             printk("\tnext policy is terminate -> do_exit\n"); //DEBUG
 //            do_exit(code);
 //            kill(pTask->pid, 15);
+            kill_proc_info(15,&info,pTask->pid);
+
             return;
         }else if (pTask->next_policy_id == 1){
             update_task_policy_info(pTask);
@@ -103,38 +110,58 @@ void after_terminate(unsigned long data){
 
 ///***************************our_timeout******************************************//
 void our_timeout(struct task_struct * pTask){
-    printk("In our_timeout");//DEBUG
+    printk("In our_timeout\n");//DEBUG
     printk("\tpid of task that is going to do policy =%d\n",pTask->pid); //DEBUG
-    struct timeval time;
+
+    struct timer_list* pTimer = kmalloc(sizeof(struct timer_list),GFP_KERNEL);
+    if(pTimer == NULL){
+        printk("\tpTimer is NULL\n"); //DEBUG
+        return;
+    }
     struct timespec timeout_secs;
     timeout_secs.tv_sec = pTask->policy_value;
     timeout_secs.tv_nsec = 0;
-    signed long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
-    struct timer_list timer;
-    unsigned long expire = timeout_jiffies + jiffies;
+    unsigned long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
+    unsigned long expire = (unsigned long)(timeout_jiffies + jiffies);
 
+    printk("\t**timeout_secs.tv_sec =%d**\n",timeout_secs.tv_sec); //DEBUG
+    printk("\t**&timeout_secs =%lu**\n",&timeout_secs); //DEBUG
+    printk("\t**timeout_jiffies=%lu**\n",timeout_jiffies); //DEBUG
     printk("\tpolicy_value =%d\n",pTask->policy_value); //DEBUG
     printk("\ttimeout_jiffies=%lu\n",timeout_jiffies); //DEBUG
+    printk("\t**pTimer =%lu**\n",pTimer); //DEBUG
+    //printk("\t**(unsigned long)pTask =%lu**\n",(unsigned long)pTask); //DEBUG
+    printk("hi\n");//DEBUG
 
-    init_timer(&timer);
-    timer.expires = expire;
-    timer.data = (unsigned long)pTask;
+
+    if(pTimer->list.prev == NULL){
+        printk("\tpTimer->list.prev is NULL\n"); //DEBUG
+        return;
+    }
+    printk("\tbefore init \n"); //DEBUG
+    pTimer->list.next = NULL;
+    //init_timer(pTimer);
+    printk("\tpassed init \n"); //DEBUG
+    pTimer->expires = expire;
+    printk("\tpassed expire\n"); //DEBUG
+    pTimer->data = (unsigned long)pTask;
+    printk("\tpassed data\n"); //DEBUG
     if(pTask->policy_id ==  1){
         printk("\tset next function to after_sleep \n"); //DEBUG
-        timer.function = after_sleep;
+        pTimer->function = after_sleep;
     }
     else if(pTask->policy_id ==  2){
         printk("\tset next function to after_terminate \n"); //DEBUG
-        timer.function = after_terminate;
+        pTimer->function = after_terminate;
+        printk("\t**set the function terminate**\n"); //DEBUG
     }
 
-    do_gettimeofday(&time);
-    printk("\tbefore time_out time =%d\n",time.tv_sec); //DEBUG
+     add_timer(pTimer);
 
-    add_timer(&timer);
-//    printk("\tafter add_timer \n"); //DEBUG
-//    schedule();
-//    printk("\tafter_schedule \n"); //DEBUG
+    printk("\tafter add_timer \n"); //DEBUG
+
+    schedule();
+    printk("\tafter_schedule \n"); //DEBUG
 //    del_timer_sync(&timer);
     printk("\tend our_timeout \n"); //DEBUG
 }
@@ -153,14 +180,20 @@ void run_policies(struct task_struct * pTask){
 //        set_current_state(TASK_UNINTERRUPTIBLE);
         pTask->state = TASK_UNINTERRUPTIBLE;
         printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
-        our_timeout(pTask);
+//        printk("\tHZ*pTask->policy_value =%d\n",HZ*pTask->policy_value); //DEBUG
+//
+//        schedule_timeout(HZ*pTask->policy_value);
+//        update_task_policy_info(pTask);
+//        if(pTask->changed_policy == 1){
+//            run_policies(pTask);
+//        }
 
     }else if(pTask->policy_id == 2){//terminate
         printk("\tpolicy: terminate\n"); //DEBUG
         our_timeout(pTask);
     }
 
-    printk("\tshouldn't get here\n"); //DEBUG
+    printk("\tend run_policies\n"); //DEBUG
 }
 
 ////******************************set policy**************************************************************************/
