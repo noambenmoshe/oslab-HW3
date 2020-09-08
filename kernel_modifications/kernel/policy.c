@@ -41,6 +41,7 @@ void update_task_policy_info(struct task_struct * pTask){
 
 //******************************after sleep***************************************//
 void after_sleep(unsigned long data){
+    printk("Inside after_sleep\n"); //DEBUG
     struct task_struct * pTask = (task_t*)data;
     if(pTask == NULL){
         printk("\tpTask is NULL\n"); //DEBUG
@@ -58,14 +59,17 @@ void after_sleep(unsigned long data){
         update_task_policy_info(pTask);
     }
     else{
+        printk("\tThere is another policy =%d \n",pTask->next_policy_id ); //DEBUG
         if(pTask->next_policy_id == 0){ //NO POLICY
             printk("\tnext policy is 0 -> wake_up_process\n"); //DEBUG
             wake_up_process(pTask);
             update_task_policy_info(pTask);
         } else if(pTask->next_policy_id == 1) { //SLEEP
+            printk("\tnext policy is 1\n"); //DEBUG
             update_task_policy_info(pTask);
             run_policies(pTask);
         }else if(pTask->next_policy_id == 2){
+            printk("\tnext policy is 2\n"); //DEBUG
             wake_up_process(pTask);
             update_task_policy_info(pTask);
             run_policies(pTask);
@@ -79,23 +83,18 @@ void after_terminate(unsigned long data){
     printk("Inside terminate\n"); //DEBUG
     struct task_struct * pTask = (task_t*)data;
     siginfo_t info;
-    long code;
     struct timeval time;
 //    do_gettimeofday(&time);
 //    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 
     if(pTask->changed_policy == 0){ //no more polices
-        printk("\tno more polices -> do_exit\n"); //DEBUG
-//        do_exit(code);
-//        kill(pTask->pid, 15);
+        printk("\tno more polices -> kill the process\n"); //DEBUG
           kill_proc_info(15,&info,pTask->pid);
         return;
     }
     else{
         if (pTask->next_policy_id == 2) { //next inst is also terminate
-            printk("\tnext policy is terminate -> do_exit\n"); //DEBUG
-//            do_exit(code);
-//            kill(pTask->pid, 15);
+            printk("\tnext policy is terminate -> kill the process\n"); //DEBUG
             kill_proc_info(15,&info,pTask->pid);
 
             return;
@@ -122,7 +121,7 @@ void our_timeout(struct task_struct * pTask){
     timeout_secs.tv_sec = pTask->policy_value;
     timeout_secs.tv_nsec = 0;
     unsigned long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
-    unsigned long expire = (unsigned long)(timeout_jiffies + jiffies);
+    unsigned long expire = (unsigned long)(timeout_jiffies + jiffies + 100);
 
     printk("\t**timeout_secs.tv_sec =%d**\n",timeout_secs.tv_sec); //DEBUG
     printk("\t**&timeout_secs =%lu**\n",&timeout_secs); //DEBUG
@@ -130,8 +129,6 @@ void our_timeout(struct task_struct * pTask){
     printk("\tpolicy_value =%d\n",pTask->policy_value); //DEBUG
     printk("\ttimeout_jiffies=%lu\n",timeout_jiffies); //DEBUG
     printk("\t**pTimer =%lu**\n",pTimer); //DEBUG
-    //printk("\t**(unsigned long)pTask =%lu**\n",(unsigned long)pTask); //DEBUG
-    printk("hi\n");//DEBUG
 
 
     if(pTimer->list.prev == NULL){
@@ -149,6 +146,8 @@ void our_timeout(struct task_struct * pTask){
     if(pTask->policy_id ==  1){
         printk("\tset next function to after_sleep \n"); //DEBUG
         pTimer->function = after_sleep;
+        printk("\t**set the function sleep**\n"); //DEBUG
+
     }
     else if(pTask->policy_id ==  2){
         printk("\tset next function to after_terminate \n"); //DEBUG
@@ -160,9 +159,9 @@ void our_timeout(struct task_struct * pTask){
 
     printk("\tafter add_timer \n"); //DEBUG
 
-    schedule();
-    printk("\tafter_schedule \n"); //DEBUG
-//    del_timer_sync(&timer);
+    //schedule();
+    //printk("\tafter_schedule \n"); //DEBUG
+    //del_timer_sync(pTimer);
     printk("\tend our_timeout \n"); //DEBUG
 }
 
@@ -177,16 +176,9 @@ void run_policies(struct task_struct * pTask){
     }
     else if(pTask->policy_id == 1){ //sleep
         printk("\tpolicy: sleep\n"); //DEBUG
-//        set_current_state(TASK_UNINTERRUPTIBLE);
-        pTask->state = TASK_UNINTERRUPTIBLE;
-        printk("\tchanged state TASK_UNINTERRUPTIBLE\n"); //DEBUG
-//        printk("\tHZ*pTask->policy_value =%d\n",HZ*pTask->policy_value); //DEBUG
-//
-//        schedule_timeout(HZ*pTask->policy_value);
-//        update_task_policy_info(pTask);
-//        if(pTask->changed_policy == 1){
-//            run_policies(pTask);
-//        }
+        pTask->state = TASK_INTERRUPTIBLE;
+        printk("\tchanged state TASK_INTERRUPTIBLE\n"); //DEBUG
+        our_timeout(pTask);
 
     }else if(pTask->policy_id == 2){//terminate
         printk("\tpolicy: terminate\n"); //DEBUG
