@@ -48,12 +48,10 @@ void after_sleep(unsigned long data){
         return;
     }
     int res;
-//    struct timeval time;
-//    do_gettimeofday(&time);
-//    printk("\tafter time_out time =%d\n",(int)time.tv_sec); //DEBUG
 
     if(pTask->changed_policy == 0){ //no more polices
         printk("\tno more polices -> wake_up_process \n"); //DEBUG
+        pTask->policy_id = -1;
         res = wake_up_process(pTask);
         printk("\twake_up_process = %d \n",res); //DEBUG
         update_task_policy_info(pTask);
@@ -62,6 +60,7 @@ void after_sleep(unsigned long data){
         printk("\tThere is another policy =%d \n",pTask->next_policy_id ); //DEBUG
         if(pTask->next_policy_id == 0){ //NO POLICY
             printk("\tnext policy is 0 -> wake_up_process\n"); //DEBUG
+            pTask->policy_id = -1;
             wake_up_process(pTask);
             update_task_policy_info(pTask);
         } else if(pTask->next_policy_id == 1) { //SLEEP
@@ -70,6 +69,7 @@ void after_sleep(unsigned long data){
             run_policies(pTask);
         }else if(pTask->next_policy_id == 2){
             printk("\tnext policy is 2\n"); //DEBUG
+            pTask->policy_id = -1;
             wake_up_process(pTask);
             update_task_policy_info(pTask);
             run_policies(pTask);
@@ -112,7 +112,7 @@ void our_timeout(struct task_struct * pTask){
     printk("In our_timeout\n");//DEBUG
     printk("\tpid of task that is going to do policy =%d\n",pTask->pid); //DEBUG
 
-    struct timer_list* pTimer = kmalloc(sizeof(struct timer_list),GFP_KERNEL);
+    struct timer_list* pTimer = kmalloc(sizeof(struct timer_list),GFP_ATOMIC);
     if(pTimer == NULL){
         printk("\tpTimer is NULL\n"); //DEBUG
         return;

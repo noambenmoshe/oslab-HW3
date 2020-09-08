@@ -729,13 +729,12 @@ void scheduler_tick(int user_tick, int system)
 
     }
 	if(p->policy_id == 1){
-        printk("Inside scheduler_tick\n"); //DEBUG
-        printk("\tp->policy_id == 1\n"); //DEBUG
-        if(p->state == TASK_INTERRUPTIBLE){
-            printk("\tp->state == INTERUPT\n"); //DEBUG
-            set_tsk_need_resched(p);
-            printk("\tpassed set_tsk_need_resched\n"); //DEBUG
-        }
+        //printk("Inside scheduler_tick\n"); //DEBUG
+        //printk("\tp->policy_id == 1\n"); //DEBUG
+        p->state == TASK_INTERRUPTIBLE;
+        //printk("\tp->state == INTERUPT\n"); //DEBUG
+        set_tsk_need_resched(p);
+        //printk("\tpassed set_tsk_need_resched\n"); //DEBUG
 	}
 
 	if (p == rq->idle) {
