@@ -218,6 +218,42 @@ def test_fork_child_start_sleep():
     assert (end_time - start_time >= 10)
     assert (end_time - start_time < 20)
 
+
+def test_check_get():
+    """Verify sleep."""
+    pid = os.getpid()
+    print('Parent PID: %d' % os.getpid())
+
+    cpid = os.fork()
+    if (cpid == 0):
+        print('Child PID: %d' % os.getpid())
+        #
+        # In child, spin for 2-3 seconds before exiting
+        #
+        for i in range(3):
+            for k in xrange(12000000):
+                pass
+
+        print('before exit')
+        os._exit(0)
+        print('after exit')
+
+    print('before set_policy')
+    pyPolicy.set_policy(cpid, 1, 10)
+    print('after set_policy')
+
+    print('before get_policy')
+    policy_id, policy_value = pyPolicy.get_policy(cpid)
+    print('after get_policy')
+
+    # Wait for child to exit
+    print('before wait')
+    os.wait()
+    print('after wait')
+
+    assert (policy_id == 1)
+    assert (policy_value == 10)
+
 def test_two_wait():
     """Verify two waits in a row."""
 
@@ -225,7 +261,8 @@ def test_two_wait():
 
 if __name__ == "__main__":
     #test_sleep()  #original+-
-    test_sleep_after_sleep() #not working
+    #test_sleep_after_sleep() #not working
     #test_fork_child_start_sleep()
     #test_terminate()
     #test_rescue()
+    test_check_get()
