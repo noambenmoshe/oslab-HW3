@@ -119,7 +119,7 @@ void our_timeout(struct task_struct * pTask){
 //    timeout_secs.tv_sec = pTask->policy_value;
 //    timeout_secs.tv_nsec = 0;
 //    unsigned long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
-    unsigned long timeout_jiffies = (unsigned long)(pTask->policy_value * HZ)
+    unsigned long timeout_jiffies = (unsigned long)(pTask->policy_value * HZ);
     unsigned long expire = (unsigned long)(timeout_jiffies + jiffies);  // TODO: maybe remove +100
 
 //    printk("\t**timeout_secs.tv_sec =%d**\n",timeout_secs.tv_sec); //DEBUG
