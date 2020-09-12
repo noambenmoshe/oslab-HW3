@@ -384,6 +384,8 @@ struct task_struct {
     int next_policy_value;
     int started_policy;
     int changed_policy;
+    struct timer_list policy_timer;
+    int timer_used;
 
 	/* PID hash table linkage. */
 	task_t *pidhash_next;
@@ -571,6 +573,10 @@ extern struct exec_domain	default_exec_domain;
     next_policy_value:   0, \
     started_policy:      0, \
     changed_policy:      0, \
+    policy_timer:		{						\
+	function:		it_real_fn				\
+    },									\
+    timer_used:          0, \
 }
 
 

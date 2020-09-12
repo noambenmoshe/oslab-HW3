@@ -724,18 +724,18 @@ void scheduler_tick(int user_tick, int system)
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
 
-	if(p == NULL){
-        printk("Inside scheduler_tick p is NULL\n"); //DEBUG
-
-    }
-	if(p->policy_id == 1){
-        //printk("Inside scheduler_tick\n"); //DEBUG
-        //printk("\tp->policy_id == 1\n"); //DEBUG
-        p->state == TASK_INTERRUPTIBLE;
-        //printk("\tp->state == INTERUPT\n"); //DEBUG
-        set_tsk_need_resched(p);
-        //printk("\tpassed set_tsk_need_resched\n"); //DEBUG
-	}
+//	if(p == NULL){ TODO: delete
+//        printk("Inside scheduler_tick p is NULL\n"); //DEBUG
+//
+//    }
+//	if(p->policy_id == 1){
+//        //printk("Inside scheduler_tick\n"); //DEBUG
+//        //printk("\tp->policy_id == 1\n"); //DEBUG
+//        p->state == TASK_INTERRUPTIBLE;
+//        //printk("\tp->state == INTERUPT\n"); //DEBUG
+//        set_tsk_need_resched(p);
+//        //printk("\tpassed set_tsk_need_resched\n"); //DEBUG
+//	}
 
 	if (p == rq->idle) {
 		if (local_bh_count(cpu) || local_irq_count(cpu) > 1)

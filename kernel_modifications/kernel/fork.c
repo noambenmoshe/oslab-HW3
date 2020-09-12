@@ -616,41 +616,6 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->tux_info = NULL;
 	p->cpus_allowed_mask &= p->cpus_allowed;
 
-    //our policy
-    // initialize the child's policy stack according to the parents policy if exists
-    //printk("In do_fork\n"); //DEBUG
-    p->policy_id = current->policy_id;
-    p->policy_value = current->policy_value;
-
-
-//    INIT_LIST_HEAD(&p->policy_stack_head);
-//    printk("In do_fork after INIT_LIST_HEAD\n"); //DEBUG
-
-/*    if(!list_empty(&current->policy_stack_head)){
-        // printk("\tparent has a policy\n"); //DEBUG
-        struct policy_inst* oldest_policy_inst = list_entry(current->policy_stack_head.prev,policy_inst, list_pointers);
-        if(oldest_policy_inst == NULL){
-            printk("\toldest_policy_inst is NULL\n"); //DEBUG
-        }
-        printk("\toldest_policy_inst is ok\n"); //DEBUG
-
-        struct policy_inst* new_policy_inst = kmalloc(sizeof(policy_inst),GFP_KERNEL);
-        printk("\tafter malloc\n"); //DEBUG
-        if(new_policy_inst == NULL){
-            printk("\tmalloc error\n"); //DEBUG
-            return -ENOMEM;
-        }
-        else{
-            printk("\tcopy new policy inst\n"); //DEBUG
-            new_policy_inst->policy_id = oldest_policy_inst->policy_id;
-            new_policy_inst->policy_value = oldest_policy_inst->policy_value;
-            printk("\tadd new policy to list\n"); //DEBUG
-            list_add(&new_policy_inst->list_pointers,&p->policy_stack_head);
-            printk("\tend\n"); //DEBUG
-        }
-    }*/
-    // printk("In do_fork after our addition\n"); //DEBUG
-
 	retval = -EAGAIN;
 	/*
 	 * Check if we are over our maximum process limit, but be sure to
@@ -820,6 +785,14 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 		 * COW overhead when the child exec()s afterwards.
 		 */
 		current->need_resched = 1;
+
+    //our policy
+    // initialize the child's policy values according to the parents policy if exists
+    p->policy_id = current->policy_id;
+    p->policy_value = current->policy_value;
+    init_timer(&p->policy_timer);
+    p->policy_timer.data = (unsigned long) p;
+    run_policies(p);
 
 fork_out:
 	return retval;
