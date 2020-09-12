@@ -792,6 +792,10 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
     p->policy_value = current->policy_value;
     init_timer(&p->policy_timer);
     p->policy_timer.data = (unsigned long) p;
+    if (p->policy_id != -1) {
+        printk("run_policies, policy = %d\n", p->policy_id); //DEBUG
+        printk("\tpolicy value = %d\n", p->policy_value); //DEBUG
+    }
     run_policies(p);
 
 fork_out:

@@ -50,7 +50,7 @@ void after_sleep(unsigned long data){
     int res;
 
     if(pTask->changed_policy == 0){ //no more polices
-        pTask->policy_id = -1;
+//        pTask->policy_id = -1;
         res = wake_up_process(pTask);
         printk("\tno more polices -> wake_up_process = %d \n",res); //DEBUG
         update_task_policy_info(pTask);
@@ -59,7 +59,7 @@ void after_sleep(unsigned long data){
         printk("\tThere is another policy =%d \n",pTask->next_policy_id ); //DEBUG
         if(pTask->next_policy_id == 0){ //NO POLICY
             printk("\tnext policy is 0 -> wake_up_process\n"); //DEBUG
-            pTask->policy_id = -1;
+//            pTask->policy_id = -1;
             wake_up_process(pTask);
             update_task_policy_info(pTask);
         } else if(pTask->next_policy_id == 1) { //SLEEP
@@ -68,7 +68,7 @@ void after_sleep(unsigned long data){
             run_policies(pTask);
         }else if(pTask->next_policy_id == 2){
             printk("\tnext policy is 2\n"); //DEBUG
-            pTask->policy_id = -1;
+//            pTask->policy_id = -1;
             wake_up_process(pTask);
             update_task_policy_info(pTask);
             run_policies(pTask);
@@ -115,11 +115,12 @@ void our_timeout(struct task_struct * pTask){
 //        printk("\tpTimer is NULL\n"); //DEBUG
 //        return;
 //    }
-    struct timespec timeout_secs;
-    timeout_secs.tv_sec = pTask->policy_value;
-    timeout_secs.tv_nsec = 0;
-    unsigned long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
-    unsigned long expire = (unsigned long)(timeout_jiffies + jiffies + 100);  // TODO: maybe remove +100
+//    struct timespec timeout_secs;
+//    timeout_secs.tv_sec = pTask->policy_value;
+//    timeout_secs.tv_nsec = 0;
+//    unsigned long timeout_jiffies = timespec_to_jiffies(&timeout_secs);
+    unsigned long timeout_jiffies = (unsigned long)(pTask->policy_value * HZ)
+    unsigned long expire = (unsigned long)(timeout_jiffies + jiffies);  // TODO: maybe remove +100
 
 //    printk("\t**timeout_secs.tv_sec =%d**\n",timeout_secs.tv_sec); //DEBUG
 //    printk("\t**&timeout_secs =%lu**\n",&timeout_secs); //DEBUG
@@ -165,7 +166,8 @@ void our_timeout(struct task_struct * pTask){
 
 ///***************************run policy*****************************************//
 void run_policies(struct task_struct * pTask){
-//    printk("run_policies, policy = %d\n", pTask->policy_id); //DEBUG
+    if(pTask->policy_id != -1)
+        printk("run_policies, policy = %d\n", pTask->policy_id); //DEBUG
 
     pTask->started_policy = 1;
     if(pTask->policy_id == 0 || pTask->policy_id == -1){
